@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gifts Hub | Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: auto; }
+        
+        /* Form Styling */
+        .card { background: #fff; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        h2 { margin-top: 0; color: #1a1a1a; font-size: 1.5rem; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .grid-form { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        .full-width { grid-column: span 2; }
+        button.add-btn { background: #1a1a1a; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 15px; transition: 0.3s; }
+        button.add-btn:hover { background: #333; }
+
+        /* Inventory List */
+        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .item-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; padding-bottom: 10px; }
+        .item-card img { width: 100%; height: 150px; object-fit: cover; }
+        .item-card h4 { margin: 10px 0 5px; font-size: 0.9rem; }
+        .item-card p { font-size: 0.8rem; color: #666; margin: 0 0 10px; }
+        .delete-btn { background: #ff4757; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600; }
+        .delete-btn:hover { background: #ff2e44; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2><i class="fa fa-plus-circle"></i> Add New Product</h2>
+        <div class="grid-form">
+            <input type="text" id="pName" class="full-width" placeholder="Product Name (e.g. Personalized Wallet)">
+            <input type="number" id="pMrp" placeholder="Original Price (MRP)">
+            <input type="number" id="pPrice" placeholder="Sale Price (Discounted)">
+            <input type="text" id="pImg" class="full-width" placeholder="Image URL (Link)">
+        </div>
+        <button class="add-btn" onclick="addProduct()">Publish Product</button>
+    </div>
+
+    <h2><i class="fa fa-boxes-stacked"></i> Live Inventory</h2>
+    <div class="inventory-grid" id="inventory">
+        </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBVd8VD0Gcf0skKGbowuxsPstEy0_3hUCg",
+        databaseURL: "https://ruble-452dc-default-rtdb.firebaseio.com",
+        projectId: "ruble-452dc",
+        appId: "1:533381698939:web:e2ea188d3b18f03fd319de"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const productsRef = ref(db, 'products');
+
+    // ADD PRODUCT
+    window.addProduct = function() {
+        const name = document.getElementById('pName').value;
+        const mrp = document.getElementById('pMrp').value;
+        const price = document.getElementById('pPrice').value;
+        const img = document.getElementById('pImg').value;
+
+        if(name && price && img) {
+            push(productsRef, {
+                name: name,
+                mrp: mrp || (parseInt(price) + 200),
+                price: price,
+                image: img
+            }).then(() => {
+                alert("Success! Product is now Live.");
+                document.querySelectorAll('input').forEach(i => i.value = '');
+            });
+        } else {
+            alert("Please fill all required fields!");
+        }
+    }
+
+    // LOAD & SHOW PRODUCTS WITH DELETE OPTION
+    onValue(productsRef, (snapshot) => {
+        const data = snapshot.val();
+        const inventory = document.getElementById('inventory');
+        inventory.innerHTML = '';
+
+        if(data) {
+            for (let id in data) {
+                const p = data[id];
+                inventory.innerHTML += `
+                    <div class="item-card">
+                        <img src="${p.image}">
+                        <h4>${p.name}</h4>
+                        <p>₹${p.price} <span style="text-decoration:line-through; color:#aaa;">₹${p.mrp}</span></p>
+                        <button class="delete-btn" onclick="deleteProduct('${id}')">
+                            <i class="fa fa-trash"></i> Remove
+                        </button>
+                    </div>
+                `;
+            }
+        } else {
+            inventory.innerHTML = "<p>No products found in database.</p>";
+        }
+    });
+
+    // DELETE PRODUCT FUNCTION
+    window.deleteProduct = function(id) {
+        if(confirm("Are you sure you want to remove this product from your website?")) {
+            remove(ref(db, 'products/' + id))
+            .then(() => alert("Product Removed!"));
+        }
+    }
+</script>
+
+</body>
+</html>
